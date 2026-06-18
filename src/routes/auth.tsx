@@ -1,78 +1,89 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AmbientBackground } from "@/components/devdiary/AmbientBackground";
-import { TopBar } from "@/components/devdiary/TopBar";
 import { MoodOrb } from "@/components/devdiary/MoodOrb";
-import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — DEV DIARY" },
-      { name: "description", content: "Sign in to your DEV DIARY." },
+      { title: "Welcome — DEV DIARY" },
+      { name: "description", content: "Begin your DEV DIARY." },
     ],
   }),
-  component: AuthPage,
+  component: OnboardPage,
 });
 
-function AuthPage() {
+function OnboardPage() {
+  const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [age, setAge] = useState("");
+
+  const canStart = name.trim().length > 0 && Number(age) > 0;
+
+  function handleStart(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canStart) return;
+    try {
+      localStorage.setItem(
+        "devdiary:profile",
+        JSON.stringify({ name: name.trim(), age: Number(age) }),
+      );
+    } catch {}
+    navigate({ to: "/" });
+  }
+
   return (
     <div className="relative min-h-screen">
       <AmbientBackground />
-      <TopBar
-        right={
-          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
-            <ArrowLeft className="size-4" /> Home
-          </Link>
-        }
-      />
-      <main className="mx-auto max-w-md px-6 pt-12 pb-24 space-y-8">
+      <main className="mx-auto max-w-md px-6 pt-20 pb-24 space-y-10">
         <div className="text-center space-y-6">
           <MoodOrb size={160} mood="Welcome" caption="Begin" hue="indigo" />
-          <div className="space-y-2">
-            <h1 className="text-display text-3xl text-white leading-tight">
-              Step into your own attention.
+          <div className="space-y-3">
+            <h1 className="text-display text-3xl text-white leading-tight text-balance">
+              Before we begin, who are you?
             </h1>
             <p className="text-muted-foreground text-sm">
-              Sign in to continue your diary. Your entries stay yours.
+              Just a name and an age. No accounts. No friction.
             </p>
           </div>
         </div>
 
-        <form onSubmit={(e) => e.preventDefault()} className="glass-card-strong rounded-3xl p-6 space-y-4">
-          <button
-            type="button"
-            className="w-full rounded-xl glass-card py-3 text-sm font-medium text-foreground/90 hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
-          >
-            Continue with Google
-          </button>
-          <div className="flex items-center gap-3 text-xs text-foreground/40">
-            <div className="h-px flex-1 bg-white/10" />
-            or with email
-            <div className="h-px flex-1 bg-white/10" />
+        <form onSubmit={handleStart} className="glass-card-strong rounded-3xl p-6 space-y-4">
+          <div className="space-y-2">
+            <label className="text-xs uppercase tracking-[0.18em] text-foreground/50">Your name</label>
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Alex"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-foreground/40 outline-none focus:border-white/30"
+            />
           </div>
-          <input
-            type="email"
-            placeholder="you@example.com"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-foreground/40 outline-none focus:border-white/30"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-foreground/40 outline-none focus:border-white/30"
-          />
+          <div className="space-y-2">
+            <label className="text-xs uppercase tracking-[0.18em] text-foreground/50">Your age</label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={120}
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="27"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-foreground/40 outline-none focus:border-white/30"
+            />
+          </div>
           <button
             type="submit"
-            className="w-full rounded-xl bg-white text-background py-3 text-sm font-medium hover:translate-y-[-1px] transition-transform shadow-[0_18px_40px_-12px_color-mix(in_oklab,var(--indigo-glow)_55%,transparent)]"
+            disabled={!canStart}
+            className="w-full rounded-xl bg-white text-background py-3 text-sm font-medium hover:translate-y-[-1px] transition-transform shadow-[0_18px_40px_-12px_color-mix(in_oklab,var(--indigo-glow)_55%,transparent)] disabled:opacity-40 disabled:hover:translate-y-0 inline-flex items-center justify-center gap-2"
           >
-            Continue
+            Get started <ArrowRight className="size-4" />
           </button>
-          <p className="text-center text-xs text-muted-foreground">
-            Forgot password? <span className="underline underline-offset-4">Reset it</span>
-          </p>
         </form>
 
         <p className="text-center text-xs text-muted-foreground">
-          By continuing you agree to keep being honest with yourself.
+          Stored only on this device. Your reflections stay yours.
         </p>
       </main>
     </div>
