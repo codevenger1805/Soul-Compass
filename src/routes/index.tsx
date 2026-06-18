@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AmbientBackground } from "@/components/devdiary/AmbientBackground";
 import { MobileDock } from "@/components/devdiary/MobileDock";
 import { TopBar } from "@/components/devdiary/TopBar";
 import { MoodOrb } from "@/components/devdiary/MoodOrb";
-import { entries, insights, chapters } from "@/components/devdiary/data";
+import { useEntries, groupByChapter, formatDateLabel, type Entry } from "@/components/devdiary/data";
 import { ArrowUpRight, Mic, Camera, Sparkles, TreeDeciduous, Mail, Activity } from "lucide-react";
 
 function greetingFor(hour: number) {
