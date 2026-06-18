@@ -22,7 +22,7 @@ export function MobileDock() {
           const active = pathname === to;
           if (primary) {
             return (
-              <Link key={to} to={to} aria-label={label} className="-mt-8">
+              <Link key={to} to={to as any} aria-label={label} className="-mt-8">
                 <span
                   className="grid place-items-center size-14 rounded-full text-background ring-4 ring-background/60"
                   style={{
