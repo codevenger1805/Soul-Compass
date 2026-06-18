@@ -3,40 +3,38 @@ import { useMemo } from "react";
 import { AmbientBackground } from "@/components/devdiary/AmbientBackground";
 import { MobileDock } from "@/components/devdiary/MobileDock";
 import { TopBar } from "@/components/devdiary/TopBar";
-import { entries } from "@/components/devdiary/data";
-import { ArrowLeft } from "lucide-react";
+import { useEntries } from "@/components/devdiary/data";
+import { ArrowLeft, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/galaxy")({
   head: () => ({
     meta: [
       { title: "Memory Galaxy — DEV DIARY" },
-      { name: "description", content: "Every memory becomes a floating node. Navigate your life as a constellation." },
+      { name: "description", content: "Every memory becomes a floating node." },
     ],
   }),
   component: GalaxyPage,
 });
 
 function GalaxyPage() {
+  const { entries } = useEntries();
+
   const nodes = useMemo(() => {
-    // expand entries into a denser starfield, anchoring to real moments
-    const arr: { id: string; cx: number; cy: number; r: number; hue: string; label?: string; energy: number }[] = [];
-    for (let i = 0; i < 80; i++) {
-      const seed = i * 9301 + 49297;
-      const cx = (seed % 100) + ((i * 13) % 7) - 3;
-      const cy = ((seed * 7) % 100) + ((i * 19) % 5);
-      const e = entries[i % entries.length];
-      arr.push({
-        id: `n${i}`,
-        cx: Math.max(4, Math.min(96, cx)),
-        cy: Math.max(6, Math.min(94, cy)),
-        r: 1 + ((i * 3) % 4),
+    return entries.map((e, i) => {
+      const seed = (i + 1) * 9301 + 49297;
+      const cx = Math.max(6, Math.min(94, (seed % 100)));
+      const cy = Math.max(8, Math.min(92, ((seed * 7) % 100)));
+      return {
+        id: e.id,
+        cx,
+        cy,
+        r: 2 + e.energy,
         hue: e.hue,
-        label: i % 11 === 0 ? e.title : undefined,
+        label: e.title,
         energy: e.energy,
-      });
-    }
-    return arr;
-  }, []);
+      };
+    });
+  }, [entries]);
 
   return (
     <div className="relative min-h-screen pb-36">
@@ -60,28 +58,27 @@ function GalaxyPage() {
         </header>
 
         <div className="glass-card-strong rounded-[2rem] relative aspect-[4/3] overflow-hidden">
-          {/* nebulas */}
           <div className="absolute inset-0" style={{
             background:
               "radial-gradient(circle at 25% 30%, color-mix(in oklab, var(--indigo-glow) 35%, transparent) 0%, transparent 50%), radial-gradient(circle at 75% 70%, color-mix(in oklab, var(--emerald-glow) 25%, transparent) 0%, transparent 55%), radial-gradient(circle at 60% 20%, color-mix(in oklab, var(--amber-glow) 18%, transparent) 0%, transparent 45%)",
             filter: "blur(20px)",
           }} />
 
-          {/* faint connection lines */}
-          <svg className="absolute inset-0 w-full h-full opacity-25" viewBox="0 0 100 100" preserveAspectRatio="none">
-            {nodes.slice(0, 30).map((n, i) => {
-              const m = nodes[(i + 4) % nodes.length];
-              return (
-                <line
-                  key={n.id}
-                  x1={n.cx} y1={n.cy} x2={m.cx} y2={m.cy}
-                  stroke="white" strokeWidth="0.08" vectorEffect="non-scaling-stroke"
-                />
-              );
-            })}
-          </svg>
+          {nodes.length > 1 && (
+            <svg className="absolute inset-0 w-full h-full opacity-25" viewBox="0 0 100 100" preserveAspectRatio="none">
+              {nodes.slice(0, Math.min(nodes.length, 30)).map((n, i) => {
+                const m = nodes[(i + 1) % nodes.length];
+                return (
+                  <line
+                    key={n.id}
+                    x1={n.cx} y1={n.cy} x2={m.cx} y2={m.cy}
+                    stroke="white" strokeWidth="0.08" vectorEffect="non-scaling-stroke"
+                  />
+                );
+              })}
+            </svg>
+          )}
 
-          {/* nodes */}
           {nodes.map((n, i) => (
             <span
               key={n.id}
@@ -100,34 +97,36 @@ function GalaxyPage() {
             />
           ))}
 
-          {/* labelled stars */}
-          {nodes.filter((n) => n.label).slice(0, 5).map((n) => (
-            <div
-              key={`l-${n.id}`}
-              className="absolute pointer-events-none"
-              style={{ top: `${n.cy}%`, left: `${n.cx}%`, transform: "translate(12px, -10px)" }}
-            >
-              <span className="block w-px h-4 bg-white/30 ml-1" />
-              <span className="text-[10px] text-white/70 whitespace-nowrap pl-2">
-                {n.label}
+          {nodes.length === 0 && (
+            <div className="absolute inset-0 grid place-items-center text-center px-8">
+              <div className="space-y-4 max-w-sm">
+                <Sparkles className="size-6 text-white/70 mx-auto" />
+                <p className="text-display text-xl text-white/90">An empty sky, waiting for stars.</p>
+                <p className="text-sm text-muted-foreground">
+                  Each entry you write becomes a star here. Capture one to light the first.
+                </p>
+                <Link
+                  to="/capture"
+                  className="inline-flex items-center gap-2 rounded-full bg-white text-background px-5 py-2.5 text-sm font-medium"
+                >
+                  Begin capturing
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {nodes.length > 0 && (
+            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs text-muted-foreground">
+              <span>{nodes.length} {nodes.length === 1 ? "memory" : "memories"}</span>
+              <span className="flex items-center gap-3">
+                <Legend hue="indigo" label="focus" />
+                <Legend hue="emerald" label="growth" />
+                <Legend hue="amber" label="tender" />
+                <Legend hue="violet" label="heavy" />
               </span>
             </div>
-          ))}
-
-          <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs text-muted-foreground">
-            <span>142 memories · 4 chapters</span>
-            <span className="flex items-center gap-3">
-              <Legend hue="indigo" label="focus" />
-              <Legend hue="emerald" label="growth" />
-              <Legend hue="amber" label="tender" />
-              <Legend hue="violet" label="heavy" />
-            </span>
-          </div>
+          )}
         </div>
-
-        <p className="text-center text-xs text-muted-foreground max-w-md mx-auto">
-          A full 3D Memory Galaxy with WebGL navigation is in the next sky.
-        </p>
       </main>
       <MobileDock />
     </div>
