@@ -472,3 +472,46 @@ function LettersMini() {
     </div>
   );
 }
+
+type Insight = { label: string; title: string; detail: string };
+
+function deriveInsights(entries: Entry[]): Insight[] {
+  if (entries.length < 3) return [];
+  const insights: Insight[] = [];
+
+  // Most frequent mood
+  const moodCounts = new Map<string, number>();
+  for (const e of entries) moodCounts.set(e.mood, (moodCounts.get(e.mood) ?? 0) + 1);
+  const topMood = [...moodCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (topMood) {
+    insights.push({
+      label: "Dominant tone",
+      title: `${topMood[0]} colours most of what you write`,
+      detail: `${topMood[1]} of your ${entries.length} entries lean ${topMood[0].toLowerCase()}.`,
+    });
+  }
+
+  // Recurring tag
+  const tagCounts = new Map<string, number>();
+  for (const e of entries) for (const t of e.tags) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+  const topTag = [...tagCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (topTag && topTag[1] >= 2) {
+    insights.push({
+      label: "Recurring theme",
+      title: `"${topTag[0]}" keeps returning`,
+      detail: `It appears across ${topTag[1]} entries — a thread worth pulling on.`,
+    });
+  }
+
+  // Average energy
+  const avgEnergy = entries.reduce((s, e) => s + e.energy, 0) / entries.length;
+  insights.push({
+    label: "Energy signature",
+    title: `Your reflections average ${avgEnergy.toFixed(1)} / 5`,
+    detail: avgEnergy >= 3.5
+      ? "You tend to write when something is alive in you. Notice what feeds that."
+      : "You write most honestly from quieter places. That's a craft, not a deficit.",
+  });
+
+  return insights.slice(0, 3);
+}
