@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AmbientBackground } from "@/components/devdiary/AmbientBackground";
 import { MobileDock } from "@/components/devdiary/MobileDock";
 import { TopBar } from "@/components/devdiary/TopBar";
 import { MoodOrb } from "@/components/devdiary/MoodOrb";
-import { entries, insights, chapters } from "@/components/devdiary/data";
+import { useEntries, groupByChapter, formatDateLabel, type Entry } from "@/components/devdiary/data";
 import { ArrowUpRight, Mic, Camera, Sparkles, TreeDeciduous, Mail, Activity } from "lucide-react";
 
 function greetingFor(hour: number) {
@@ -28,7 +28,10 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  const { entries } = useEntries();
   const today = entries.slice(0, 3);
+  const chapters = useMemo(() => groupByChapter(entries), [entries]);
+  const insights = useMemo(() => deriveInsights(entries), [entries]);
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ name: string; age: number } | null>(null);
   const [now, setNow] = useState(() => new Date());
@@ -79,14 +82,20 @@ function Home() {
         {/* Hero */}
         <section className="grid place-items-center text-center space-y-10 animate-rise-in">
           <div className="text-eyebrow text-foreground/60">{dateLabel} · {timeLabel}</div>
-          <MoodOrb size={280} mood="Focused" caption="Today's state" hue="indigo" />
+          <MoodOrb
+            size={280}
+            mood={entries[0]?.mood ?? "Begin"}
+            caption={entries.length === 0 ? "Awaiting first light" : "Today's state"}
+            hue={entries[0]?.hue ?? "indigo"}
+          />
           <div className="space-y-5 max-w-xl">
             <h1 className="text-display text-4xl sm:text-6xl text-white text-balance leading-[1.05]">
               {greeting}, {profile.name}.<br />Who are you becoming today?
             </h1>
             <p className="text-muted-foreground text-balance">
-              At {profile.age}, every reflection is a quiet vote for who you're
-              becoming. Your orb has warmed two shades this week.
+              {entries.length === 0
+                ? `At ${profile.age}, this is the day your story starts recording itself. Capture a single honest sentence.`
+                : `${entries.length} ${entries.length === 1 ? "entry" : "entries"} so far. Every reflection is a quiet vote for who you're becoming.`}
             </p>
           </div>
 
@@ -140,7 +149,7 @@ function Home() {
               to="/galaxy"
               icon={<Sparkles className="size-4" />}
               label="Memory Galaxy"
-              meta="142 nodes"
+              meta={`${entries.length} ${entries.length === 1 ? "node" : "nodes"}`}
               accent="indigo"
             >
               <GalaxyMini />
@@ -149,7 +158,7 @@ function Home() {
               to="/growth"
               icon={<TreeDeciduous className="size-4" />}
               label="Growth Tree"
-              meta="Season 3 · Spring"
+              meta={entries.length === 0 ? "Seed" : "Growing"}
               accent="emerald"
             >
               <TreeMini />
@@ -158,7 +167,7 @@ function Home() {
               to="/heatmap"
               icon={<Activity className="size-4" />}
               label="Life Heatmap"
-              meta="14 months"
+              meta="Patterns"
               accent="amber"
             >
               <HeatmapMini />
@@ -167,7 +176,7 @@ function Home() {
               to="/letters"
               icon={<Mail className="size-4" />}
               label="Letters to Future Self"
-              meta="3 in transit"
+              meta="In transit"
               accent="violet"
             >
               <LettersMini />
@@ -176,58 +185,83 @@ function Home() {
         </section>
 
         {/* Insights */}
-        <section className="space-y-5 animate-rise-in">
-          <SectionHeading eyebrow="Reflection engine" trailing="What you are showing yourself" />
-          <div className="grid md:grid-cols-3 gap-4">
-            {insights.map((i) => (
-              <div key={i.title} className="glass-card rounded-3xl p-6 space-y-3 hover:bg-white/[0.05] transition-colors">
-                <p className="text-eyebrow text-accent">{i.label}</p>
-                <p className="text-display text-xl text-white/95 leading-snug text-balance">
-                  {i.title}
-                </p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{i.detail}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        {insights.length > 0 && (
+          <section className="space-y-5 animate-rise-in">
+            <SectionHeading eyebrow="Reflection engine" trailing="What you are showing yourself" />
+            <div className="grid md:grid-cols-3 gap-4">
+              {insights.map((i) => (
+                <div key={i.title} className="glass-card rounded-3xl p-6 space-y-3 hover:bg-white/[0.05] transition-colors">
+                  <p className="text-eyebrow text-accent">{i.label}</p>
+                  <p className="text-display text-xl text-white/95 leading-snug text-balance">
+                    {i.title}
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{i.detail}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Current chapter + recent */}
         <section className="space-y-6 animate-rise-in">
           <div className="flex items-end justify-between">
-            <SectionHeading eyebrow="Current chapter" />
-            <span className="text-display text-lg text-white/85">The Early Startup Years</span>
+            <SectionHeading eyebrow={entries.length === 0 ? "Your chapters" : "Recent moments"} />
+            {chapters[0] && (
+              <span className="text-display text-lg text-white/85">{chapters[0].name}</span>
+            )}
           </div>
-          <div className="space-y-3">
-            {today.map((e) => (
+          {entries.length === 0 ? (
+            <div className="glass-card rounded-3xl p-8 text-center space-y-3">
+              <p className="text-display text-xl text-white/90">No entries yet.</p>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                The first one is always the hardest. After that, the orb starts to listen.
+              </p>
               <Link
-                key={e.id}
-                to="/timeline"
-                className="glass-card rounded-2xl p-5 sm:p-6 flex items-center gap-5 group hover:bg-white/[0.05] transition-colors"
+                to="/capture"
+                className="inline-flex items-center gap-2 rounded-full bg-white text-background px-5 py-2.5 text-sm font-medium hover:translate-y-[-1px] transition-transform"
               >
-                <span className="text-eyebrow text-foreground/45 tabular-nums w-14 shrink-0">
-                  {e.dateLabel}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-white font-medium truncate">{e.title}</h4>
-                  <p className="text-sm text-muted-foreground line-clamp-1">{e.excerpt}</p>
-                </div>
-                <span
-                  className="size-2.5 rounded-full shrink-0"
-                  style={{
-                    background: `var(--${e.hue === "indigo" ? "indigo" : e.hue === "emerald" ? "emerald" : e.hue === "amber" ? "amber" : "violet"}-glow)`,
-                    boxShadow: `0 0 14px var(--${e.hue === "indigo" ? "indigo" : e.hue === "emerald" ? "emerald" : e.hue === "amber" ? "amber" : "violet"}-glow)`,
-                  }}
-                />
+                Write the first entry <ArrowUpRight className="size-3.5" />
               </Link>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2 pt-2">
-            {chapters.map((c) => (
-              <span key={c.id} className="text-xs text-muted-foreground px-3 py-1.5 rounded-full border border-white/10">
-                {c.name} <span className="opacity-50">· {c.count}</span>
-              </span>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {today.map((e) => (
+                  <Link
+                    key={e.id}
+                    to="/timeline"
+                    className="glass-card rounded-2xl p-5 sm:p-6 flex items-center gap-5 group hover:bg-white/[0.05] transition-colors"
+                  >
+                    <span className="text-eyebrow text-foreground/45 tabular-nums w-16 shrink-0">
+                      {formatDateLabel(e.date)}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-white font-medium truncate">{e.title}</h4>
+                      {e.excerpt && (
+                        <p className="text-sm text-muted-foreground line-clamp-1">{e.excerpt}</p>
+                      )}
+                    </div>
+                    <span
+                      className="size-2.5 rounded-full shrink-0"
+                      style={{
+                        background: `var(--${e.hue}-glow)`,
+                        boxShadow: `0 0 14px var(--${e.hue}-glow)`,
+                      }}
+                    />
+                  </Link>
+                ))}
+              </div>
+              {chapters.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {chapters.map((c) => (
+                    <span key={c.name} className="text-xs text-muted-foreground px-3 py-1.5 rounded-full border border-white/10">
+                      {c.name} <span className="opacity-50">· {c.items.length}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </section>
 
         {/* Manifesto */}
@@ -437,4 +471,47 @@ function LettersMini() {
       ))}
     </div>
   );
+}
+
+type Insight = { label: string; title: string; detail: string };
+
+function deriveInsights(entries: Entry[]): Insight[] {
+  if (entries.length < 3) return [];
+  const insights: Insight[] = [];
+
+  // Most frequent mood
+  const moodCounts = new Map<string, number>();
+  for (const e of entries) moodCounts.set(e.mood, (moodCounts.get(e.mood) ?? 0) + 1);
+  const topMood = [...moodCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (topMood) {
+    insights.push({
+      label: "Dominant tone",
+      title: `${topMood[0]} colours most of what you write`,
+      detail: `${topMood[1]} of your ${entries.length} entries lean ${topMood[0].toLowerCase()}.`,
+    });
+  }
+
+  // Recurring tag
+  const tagCounts = new Map<string, number>();
+  for (const e of entries) for (const t of e.tags) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+  const topTag = [...tagCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (topTag && topTag[1] >= 2) {
+    insights.push({
+      label: "Recurring theme",
+      title: `"${topTag[0]}" keeps returning`,
+      detail: `It appears across ${topTag[1]} entries — a thread worth pulling on.`,
+    });
+  }
+
+  // Average energy
+  const avgEnergy = entries.reduce((s, e) => s + e.energy, 0) / entries.length;
+  insights.push({
+    label: "Energy signature",
+    title: `Your reflections average ${avgEnergy.toFixed(1)} / 5`,
+    detail: avgEnergy >= 3.5
+      ? "You tend to write when something is alive in you. Notice what feeds that."
+      : "You write most honestly from quieter places. That's a craft, not a deficit.",
+  });
+
+  return insights.slice(0, 3);
 }

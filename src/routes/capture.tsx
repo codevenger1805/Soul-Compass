@@ -1,35 +1,65 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { AmbientBackground } from "@/components/devdiary/AmbientBackground";
 import { MobileDock } from "@/components/devdiary/MobileDock";
 import { TopBar } from "@/components/devdiary/TopBar";
 import { MoodOrb } from "@/components/devdiary/MoodOrb";
-import { ArrowLeft, Mic, Camera, Hash } from "lucide-react";
+import { useEntries, type Hue, type MoodName } from "@/components/devdiary/data";
+import { ArrowLeft, Hash } from "lucide-react";
 
 export const Route = createFileRoute("/capture")({
   head: () => ({
     meta: [
       { title: "Daily Capture — DEV DIARY" },
-      { name: "description", content: "Capture today: title, content, mood, energy, tags, voice notes and photos." },
+      { name: "description", content: "Capture today: title, content, mood, energy, tags." },
     ],
   }),
   component: CapturePage,
 });
 
-const moods = [
-  { name: "Heavy", hue: "violet" as const },
-  { name: "Tender", hue: "amber" as const },
-  { name: "Calm", hue: "indigo" as const },
-  { name: "Focused", hue: "indigo" as const },
-  { name: "Curious", hue: "emerald" as const },
-  { name: "Radiant", hue: "emerald" as const },
+const moods: { name: MoodName; hue: Hue }[] = [
+  { name: "Heavy", hue: "violet" },
+  { name: "Tender", hue: "amber" },
+  { name: "Calm", hue: "indigo" },
+  { name: "Focused", hue: "indigo" },
+  { name: "Curious", hue: "emerald" },
+  { name: "Radiant", hue: "emerald" },
 ];
 
 function CapturePage() {
+  const navigate = useNavigate();
+  const { add } = useEntries();
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
   const [mood, setMood] = useState(moods[3]);
   const [energy, setEnergy] = useState(3);
-  const [tags, setTags] = useState<string[]>(["startup"]);
+  const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [chapter, setChapter] = useState("");
+
+  const canSave = title.trim().length > 0 || body.trim().length > 0;
+
+  function commitTag() {
+    const t = tagInput.trim().replace(/^#/, "");
+    if (!t) return;
+    if (!tags.includes(t)) setTags([...tags, t]);
+    setTagInput("");
+  }
+
+  function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSave) return;
+    add({
+      title: title.trim() || "Untitled moment",
+      excerpt: body.trim(),
+      mood: mood.name,
+      energy,
+      tags,
+      chapter: chapter.trim() || undefined,
+      hue: mood.hue,
+    });
+    navigate({ to: "/timeline" });
+  }
 
   return (
     <div className="relative min-h-screen pb-36">
@@ -50,15 +80,16 @@ function CapturePage() {
           </h1>
         </header>
 
-        <form
-          onSubmit={(e) => e.preventDefault()}
-          className="glass-card-strong rounded-3xl p-6 sm:p-8 space-y-7"
-        >
+        <form onSubmit={handleSave} className="glass-card-strong rounded-3xl p-6 sm:p-8 space-y-7">
           <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             placeholder="Give this moment a name"
             className="w-full bg-transparent text-display text-2xl sm:text-3xl text-white placeholder:text-foreground/30 outline-none"
           />
           <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
             placeholder="Write freely. Nothing here will be graded."
             className="w-full bg-transparent text-base leading-relaxed text-foreground/90 placeholder:text-foreground/30 outline-none resize-none min-h-[180px]"
           />
@@ -113,9 +144,14 @@ function CapturePage() {
             <p className="text-eyebrow text-foreground/55">Tags</p>
             <div className="flex flex-wrap items-center gap-2">
               {tags.map((t) => (
-                <span key={t} className="px-2.5 py-1 rounded-full bg-white/5 text-xs text-foreground/80 border border-white/10">
-                  #{t}
-                </span>
+                <button
+                  type="button"
+                  key={t}
+                  onClick={() => setTags(tags.filter((x) => x !== t))}
+                  className="px-2.5 py-1 rounded-full bg-white/5 text-xs text-foreground/80 border border-white/10 hover:bg-white/10"
+                >
+                  #{t} ×
+                </button>
               ))}
               <div className="flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1">
                 <Hash className="size-3 text-foreground/40" />
@@ -123,26 +159,31 @@ function CapturePage() {
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && tagInput.trim()) {
-                      setTags([...tags, tagInput.trim()]);
-                      setTagInput("");
-                    }
+                    if (e.key === "Enter") { e.preventDefault(); commitTag(); }
                   }}
+                  onBlur={commitTag}
                   placeholder="add tag"
-                  className="bg-transparent text-xs outline-none w-20 text-foreground/80 placeholder:text-foreground/30"
+                  className="bg-transparent text-xs outline-none w-24 text-foreground/80 placeholder:text-foreground/30"
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-white/5">
-            <div className="flex items-center gap-2">
-              <IconCircle label="Voice"><Mic className="size-4" /></IconCircle>
-              <IconCircle label="Photo"><Camera className="size-4" /></IconCircle>
-            </div>
+          <div className="space-y-3">
+            <p className="text-eyebrow text-foreground/55">Chapter (optional)</p>
+            <input
+              value={chapter}
+              onChange={(e) => setChapter(e.target.value)}
+              placeholder="e.g. The early startup years"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-foreground/40 outline-none focus:border-white/30"
+            />
+          </div>
+
+          <div className="flex items-center justify-end pt-4 border-t border-white/5">
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-full bg-white text-background px-6 py-3 text-sm font-medium hover:translate-y-[-1px] transition-transform shadow-[0_16px_40px_-12px_color-mix(in_oklab,var(--indigo-glow)_55%,transparent)]"
+              disabled={!canSave}
+              className="inline-flex items-center gap-2 rounded-full bg-white text-background px-6 py-3 text-sm font-medium hover:translate-y-[-1px] transition-transform shadow-[0_16px_40px_-12px_color-mix(in_oklab,var(--indigo-glow)_55%,transparent)] disabled:opacity-40 disabled:hover:translate-y-0"
             >
               Seal this entry
             </button>
@@ -150,23 +191,10 @@ function CapturePage() {
         </form>
 
         <p className="text-center text-xs text-muted-foreground max-w-sm mx-auto">
-          Entries are private by default. The reflection engine learns from your patterns,
-          never from your words.
+          Entries are private and stored on this device.
         </p>
       </main>
       <MobileDock />
     </div>
-  );
-}
-
-function IconCircle({ children, label }: { children: React.ReactNode; label: string }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      className="size-11 rounded-full glass-card grid place-items-center text-foreground/80 hover:text-white hover:bg-white/10 transition-colors"
-    >
-      {children}
-    </button>
   );
 }
