@@ -2,13 +2,13 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, Compass, Plus, Sparkles, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const items = [
+const items: { to: string; icon: typeof Home; label: string; primary?: boolean }[] = [
   { to: "/", icon: Home, label: "Home" },
   { to: "/timeline", icon: Compass, label: "Timeline" },
   { to: "/capture", icon: Plus, label: "Capture", primary: true },
   { to: "/galaxy", icon: Sparkles, label: "Galaxy" },
   { to: "/profile", icon: User, label: "You" },
-] as const;
+];
 
 export function MobileDock() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
