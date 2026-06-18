@@ -82,14 +82,20 @@ function Home() {
         {/* Hero */}
         <section className="grid place-items-center text-center space-y-10 animate-rise-in">
           <div className="text-eyebrow text-foreground/60">{dateLabel} · {timeLabel}</div>
-          <MoodOrb size={280} mood="Focused" caption="Today's state" hue="indigo" />
+          <MoodOrb
+            size={280}
+            mood={entries[0]?.mood ?? "Begin"}
+            caption={entries.length === 0 ? "Awaiting first light" : "Today's state"}
+            hue={entries[0]?.hue ?? "indigo"}
+          />
           <div className="space-y-5 max-w-xl">
             <h1 className="text-display text-4xl sm:text-6xl text-white text-balance leading-[1.05]">
               {greeting}, {profile.name}.<br />Who are you becoming today?
             </h1>
             <p className="text-muted-foreground text-balance">
-              At {profile.age}, every reflection is a quiet vote for who you're
-              becoming. Your orb has warmed two shades this week.
+              {entries.length === 0
+                ? `At ${profile.age}, this is the day your story starts recording itself. Capture a single honest sentence.`
+                : `${entries.length} ${entries.length === 1 ? "entry" : "entries"} so far. Every reflection is a quiet vote for who you're becoming.`}
             </p>
           </div>
 
@@ -143,7 +149,7 @@ function Home() {
               to="/galaxy"
               icon={<Sparkles className="size-4" />}
               label="Memory Galaxy"
-              meta="142 nodes"
+              meta={`${entries.length} ${entries.length === 1 ? "node" : "nodes"}`}
               accent="indigo"
             >
               <GalaxyMini />
@@ -152,7 +158,7 @@ function Home() {
               to="/growth"
               icon={<TreeDeciduous className="size-4" />}
               label="Growth Tree"
-              meta="Season 3 · Spring"
+              meta={entries.length === 0 ? "Seed" : "Growing"}
               accent="emerald"
             >
               <TreeMini />
@@ -161,7 +167,7 @@ function Home() {
               to="/heatmap"
               icon={<Activity className="size-4" />}
               label="Life Heatmap"
-              meta="14 months"
+              meta="Patterns"
               accent="amber"
             >
               <HeatmapMini />
@@ -170,7 +176,7 @@ function Home() {
               to="/letters"
               icon={<Mail className="size-4" />}
               label="Letters to Future Self"
-              meta="3 in transit"
+              meta="In transit"
               accent="violet"
             >
               <LettersMini />
