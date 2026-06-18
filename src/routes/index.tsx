@@ -1,10 +1,19 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { AmbientBackground } from "@/components/devdiary/AmbientBackground";
 import { MobileDock } from "@/components/devdiary/MobileDock";
 import { TopBar } from "@/components/devdiary/TopBar";
 import { MoodOrb } from "@/components/devdiary/MoodOrb";
 import { entries, insights, chapters } from "@/components/devdiary/data";
 import { ArrowUpRight, Mic, Camera, Sparkles, TreeDeciduous, Mail, Activity } from "lucide-react";
+
+function greetingFor(hour: number) {
+  if (hour < 5) return "Late night";
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  if (hour < 21) return "Good evening";
+  return "Good night";
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -20,32 +29,64 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const today = entries.slice(0, 3);
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<{ name: string; age: number } | null>(null);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("devdiary:profile");
+      if (!raw) {
+        navigate({ to: "/auth" });
+        return;
+      }
+      setProfile(JSON.parse(raw));
+    } catch {
+      navigate({ to: "/auth" });
+    }
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
+  }, [navigate]);
+
+  if (!profile) return null;
+
+  const dateLabel = now.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+  const timeLabel = now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const greeting = greetingFor(now.getHours());
+
   return (
     <div className="relative min-h-screen pb-36">
       <AmbientBackground />
       <TopBar
         right={
-          <Link
-            to="/auth"
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-white text-background px-4 py-1.5 text-sm font-medium hover:bg-white/90 transition-colors"
+          <button
+            onClick={() => {
+              try { localStorage.removeItem("devdiary:profile"); } catch {}
+              navigate({ to: "/auth" });
+            }}
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-full glass-card px-4 py-1.5 text-sm font-medium text-foreground/80 hover:text-white transition-colors"
           >
-            Sign in <ArrowUpRight className="size-3.5" />
-          </Link>
+            Reset
+          </button>
         }
       />
 
       <main className="mx-auto max-w-5xl px-5 sm:px-8 pt-8 sm:pt-14 space-y-20 sm:space-y-28">
         {/* Hero */}
         <section className="grid place-items-center text-center space-y-10 animate-rise-in">
-          <div className="text-eyebrow text-foreground/60">Thursday · June 18 · 21:14</div>
+          <div className="text-eyebrow text-foreground/60">{dateLabel} · {timeLabel}</div>
           <MoodOrb size={280} mood="Focused" caption="Today's state" hue="indigo" />
           <div className="space-y-5 max-w-xl">
             <h1 className="text-display text-4xl sm:text-6xl text-white text-balance leading-[1.05]">
-              Good evening, Alex.<br />Who are you becoming today?
+              {greeting}, {profile.name}.<br />Who are you becoming today?
             </h1>
             <p className="text-muted-foreground text-balance">
-              Your reflections over the last 14 days suggest a quiet shift toward
-              creative confidence. The orb has warmed two shades.
+              At {profile.age}, every reflection is a quiet vote for who you're
+              becoming. Your orb has warmed two shades this week.
             </p>
           </div>
 
