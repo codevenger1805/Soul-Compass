@@ -28,7 +28,10 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  const { entries } = useEntries();
   const today = entries.slice(0, 3);
+  const chapters = useMemo(() => groupByChapter(entries), [entries]);
+  const insights = useMemo(() => deriveInsights(entries), [entries]);
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ name: string; age: number } | null>(null);
   const [now, setNow] = useState(() => new Date());
@@ -176,58 +179,83 @@ function Home() {
         </section>
 
         {/* Insights */}
-        <section className="space-y-5 animate-rise-in">
-          <SectionHeading eyebrow="Reflection engine" trailing="What you are showing yourself" />
-          <div className="grid md:grid-cols-3 gap-4">
-            {insights.map((i) => (
-              <div key={i.title} className="glass-card rounded-3xl p-6 space-y-3 hover:bg-white/[0.05] transition-colors">
-                <p className="text-eyebrow text-accent">{i.label}</p>
-                <p className="text-display text-xl text-white/95 leading-snug text-balance">
-                  {i.title}
-                </p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{i.detail}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        {insights.length > 0 && (
+          <section className="space-y-5 animate-rise-in">
+            <SectionHeading eyebrow="Reflection engine" trailing="What you are showing yourself" />
+            <div className="grid md:grid-cols-3 gap-4">
+              {insights.map((i) => (
+                <div key={i.title} className="glass-card rounded-3xl p-6 space-y-3 hover:bg-white/[0.05] transition-colors">
+                  <p className="text-eyebrow text-accent">{i.label}</p>
+                  <p className="text-display text-xl text-white/95 leading-snug text-balance">
+                    {i.title}
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{i.detail}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Current chapter + recent */}
         <section className="space-y-6 animate-rise-in">
           <div className="flex items-end justify-between">
-            <SectionHeading eyebrow="Current chapter" />
-            <span className="text-display text-lg text-white/85">The Early Startup Years</span>
+            <SectionHeading eyebrow={entries.length === 0 ? "Your chapters" : "Recent moments"} />
+            {chapters[0] && (
+              <span className="text-display text-lg text-white/85">{chapters[0].name}</span>
+            )}
           </div>
-          <div className="space-y-3">
-            {today.map((e) => (
+          {entries.length === 0 ? (
+            <div className="glass-card rounded-3xl p-8 text-center space-y-3">
+              <p className="text-display text-xl text-white/90">No entries yet.</p>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                The first one is always the hardest. After that, the orb starts to listen.
+              </p>
               <Link
-                key={e.id}
-                to="/timeline"
-                className="glass-card rounded-2xl p-5 sm:p-6 flex items-center gap-5 group hover:bg-white/[0.05] transition-colors"
+                to="/capture"
+                className="inline-flex items-center gap-2 rounded-full bg-white text-background px-5 py-2.5 text-sm font-medium hover:translate-y-[-1px] transition-transform"
               >
-                <span className="text-eyebrow text-foreground/45 tabular-nums w-14 shrink-0">
-                  {e.dateLabel}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-white font-medium truncate">{e.title}</h4>
-                  <p className="text-sm text-muted-foreground line-clamp-1">{e.excerpt}</p>
-                </div>
-                <span
-                  className="size-2.5 rounded-full shrink-0"
-                  style={{
-                    background: `var(--${e.hue === "indigo" ? "indigo" : e.hue === "emerald" ? "emerald" : e.hue === "amber" ? "amber" : "violet"}-glow)`,
-                    boxShadow: `0 0 14px var(--${e.hue === "indigo" ? "indigo" : e.hue === "emerald" ? "emerald" : e.hue === "amber" ? "amber" : "violet"}-glow)`,
-                  }}
-                />
+                Write the first entry <ArrowUpRight className="size-3.5" />
               </Link>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2 pt-2">
-            {chapters.map((c) => (
-              <span key={c.id} className="text-xs text-muted-foreground px-3 py-1.5 rounded-full border border-white/10">
-                {c.name} <span className="opacity-50">· {c.count}</span>
-              </span>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {today.map((e) => (
+                  <Link
+                    key={e.id}
+                    to="/timeline"
+                    className="glass-card rounded-2xl p-5 sm:p-6 flex items-center gap-5 group hover:bg-white/[0.05] transition-colors"
+                  >
+                    <span className="text-eyebrow text-foreground/45 tabular-nums w-16 shrink-0">
+                      {formatDateLabel(e.date)}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-white font-medium truncate">{e.title}</h4>
+                      {e.excerpt && (
+                        <p className="text-sm text-muted-foreground line-clamp-1">{e.excerpt}</p>
+                      )}
+                    </div>
+                    <span
+                      className="size-2.5 rounded-full shrink-0"
+                      style={{
+                        background: `var(--${e.hue}-glow)`,
+                        boxShadow: `0 0 14px var(--${e.hue}-glow)`,
+                      }}
+                    />
+                  </Link>
+                ))}
+              </div>
+              {chapters.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {chapters.map((c) => (
+                    <span key={c.name} className="text-xs text-muted-foreground px-3 py-1.5 rounded-full border border-white/10">
+                      {c.name} <span className="opacity-50">· {c.items.length}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </section>
 
         {/* Manifesto */}
